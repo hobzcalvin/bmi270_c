@@ -1,5 +1,4 @@
 #include <fcntl.h>
-#include <linux/i2c.h>
 #include <linux/i2c-dev.h>
 #include <stdio.h>
 #include <sys/ioctl.h>
@@ -7,6 +6,7 @@
 #include <string.h>
 
 #include "bmi270.h"
+#include "bmi270_config_file.h"
 
 extern const uint8_t bmi270_config_file[];
 

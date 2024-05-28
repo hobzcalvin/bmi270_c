@@ -41,13 +41,9 @@ int main()
 
     struct bmi270 sensor_upper = {.i2c_addr = I2C_PRIM_ADDR};
 
-    struct bmi270 sensor_lower = {.i2c_addr = I2C_SEC_ADDR};
 
     if (bmi270_init(&sensor_upper) == -1)
         printf("Failed to initialize sensor_upper. You might want to do a power cycle.\n");
-
-    if (bmi270_init(&sensor_lower) == -1)
-        printf("Failed to initialize sensor_lower. You might want to do a power cycle.\n");
 
     // -------------------------------------------------
     // HARDWARE CONFIGURATION
@@ -65,19 +61,6 @@ int main()
     enable_acc_filter_perf(&sensor_upper);
     enable_gyr_noise_perf(&sensor_upper);
     enable_gyr_filter_perf(&sensor_upper);
-
-    set_mode(&sensor_lower, PERFORMANCE_MODE);
-    set_acc_range(&sensor_lower, ACC_RANGE_2G);
-    set_gyr_range(&sensor_lower, GYR_RANGE_1000);
-    set_acc_odr(&sensor_lower, ACC_ODR_200);
-    set_gyr_odr(&sensor_lower, GYR_ODR_200);
-    set_acc_bwp(&sensor_lower, ACC_BWP_OSR4);
-    set_gyr_bwp(&sensor_lower, GYR_BWP_OSR4);
-    disable_fifo_header(&sensor_lower);
-    enable_data_streaming(&sensor_lower);
-    enable_acc_filter_perf(&sensor_lower);
-    enable_gyr_noise_perf(&sensor_lower);
-    enable_gyr_filter_perf(&sensor_lower);
 
     // -------------------------------------------------
     // NETWORK CONFIGURATION
@@ -144,34 +127,12 @@ int main()
         data_array[7] = get_microseconds_delta(&old_time2, &data_timer);    // Sensor 2 - Time
         old_time2 = data_timer;
 
-        get_acc_raw(&sensor_lower, &temp_acc[0], &temp_acc[1], &temp_acc[2]);
-        get_gyr_raw(&sensor_lower, &temp_gyr[0], &temp_gyr[1], &temp_gyr[2]);
-
         data_array[8]  = (int32_t)temp_acc[0];          // Sensor 2 - Acc X
         data_array[9]  = (int32_t)temp_acc[1];          // Sensor 2 - Acc Y
         data_array[10] = (int32_t)temp_acc[2];          // Sensor 2 - Acc Z
         data_array[11] = (int32_t)temp_gyr[0];          // Sensor 2 - Gyr X
         data_array[12] = (int32_t)temp_gyr[1];          // Sensor 2 - Gyr Y
         data_array[13] = (int32_t)temp_gyr[2];          // Sensor 2 - Gyr Z
-
-        // -------------------------------------------------
-        // SENDING DATA
-        // -------------------------------------------------
-
-        int result = sendto(sock, data_array, NUM_DATA * sizeof(int), 0, (struct sockaddr *)&receiver_address, sizeof(receiver_address));
-
-        if (result < 0)
-        {
-            printf("ERROR: Sending data failed!\n");
-            data_streaming = 0;
-            return -1;
-        }
-
-        if (!data_streaming)
-        {
-            printf("\nSending data to %s:%d at %i Hz.\n", inet_ntoa(receiver_address.sin_addr), ntohs(receiver_address.sin_port), (int)(UPDATE_RATE));
-            data_streaming = 1;
-        }
 
         // -------------------------------------------------
         // SLEEPING TO KEEP UPDATE RATE
@@ -202,16 +163,16 @@ int main()
         // DEBUGGING PRINTS
         // -------------------------------------------------
 
-        // // PRINT SENT DATA
-        // for (int i = 0; i < NUM_DATA; i++)
-        // {
-        //     printf("%i | ", data_array[i]);
-        // }
-        // printf("\n");
+        // PRINT SENT DATA
+        for (int i = 0; i < NUM_DATA; i++)
+        {
+            printf("%i | ", data_array[i]);
+        }
+        printf("\n");
 
-        // // PRINT TOTAL ELAPSED TIME
-        // clock_gettime(CLOCK_MONOTONIC_RAW, &data_timer);
-        // double total_elapsed = (data_timer.tv_sec - tic.tv_sec) + (double)(data_timer.tv_nsec - tic.tv_nsec) / 1000000000.0;
+        // PRINT TOTAL ELAPSED TIME
+        clock_gettime(CLOCK_MONOTONIC_RAW, &data_timer);
+        double total_elapsed = (data_timer.tv_sec - tic.tv_sec) + (double)(data_timer.tv_nsec - tic.tv_nsec) / 1000000000.0;
 
         // printf("Total elapsed time: %f\n", total_elapsed);
     }
@@ -221,7 +182,6 @@ int main()
     // -------------------------------------------------
 
     close(sensor_upper.i2c_fd);
-    close(sensor_lower.i2c_fd);
 
     printf("\n-------- SCRIPT ENDED SUCCESSFULLY --------\n");
 
